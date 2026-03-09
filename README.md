@@ -1,67 +1,42 @@
-# api-register-go
+# api-register-go (fork)
 
-OpenAI 账号注册工具 — **⚡ 高并发 Go 版**
+This fork is focused on the Go-based registration flow and the local dashboard in `api-register-go`.
 
-> 采用 Go 语言实现，goroutine 轻量并发，支持 50+ 账号同时注册，内存占用极低。  
-> 无需安装任何环境，直接双击 `register.exe` 即可启动。
+## Fork-specific changes
 
-## 快速开始
+- Added `Temp Mail` mode for dashboard-driven registration.
+- Added automatic fallback from `temp-mail.org` to `mail.tm`.
+- Added dashboard controls for:
+  - Temp Mail parallel on/off
+  - Worker count
+  - Next-account delay
+- Bound the Temp Mail mailbox creation cooldown to the same delay setting used for switching to the next account.
+- Added terminal fallback for manual mailbox input and manual OTP input.
+- Tightened OTP extraction to only capture `ChatGPT`-related 6-digit codes.
+- Improved Temp Mail polling to reduce unnecessary requests and avoid missing late-arriving codes.
 
-1. 双击 `register.exe` 启动
-2. 浏览器打开 `http://localhost:8899`
-3. 粘贴账号列表 → 配置参数 → 开始注册
+## Run
 
-## 账号格式
+1. Start `register.exe`, or run:
 
-每行一个账号，支持两种格式：
-
-```
-# 格式一：Outlook 密码认证
-邮箱----密码
-
-# 格式二：Outlook XOAUTH2 认证（推荐，更稳定）
-邮箱----密码----client_id----refresh_token
-
-# 示例
-DeannaSmith1590@outlook.com----MyPass123
-StephanieWilkins6224@outlook.com----MyPass456----your_client_id----your_refresh_token
+```bash
+go run .
 ```
 
-## 参数说明
+2. Open:
 
-| 参数 | 说明 | 默认 |
-|------|------|------|
-| 并发数 | 同时注册的账号数量 | 1 |
-| 代理 | HTTP 代理地址，如 `http://127.0.0.1:7890` | 无 |
-| 跳过已完成 | 跳过 `tokens/` 中已有结果的账号 | 开启 |
-| 注册转登录 | 已注册账号直接走登录流程刷新 Token | 关闭 |
+```text
+http://localhost:8899
+```
 
-## 域名邮箱模式
+## Notes
 
-在 Web 界面配置 IMAP 服务后，系统自动监听收件箱分发验证码，支持高并发 catch-all：
+- Temp Mail parallel mode can trigger provider rate limits. In practice, `2-5` workers is the safer range.
+- Successful tokens are written to the `tokens/` directory.
+- Local runtime/config artifacts such as `tokens/`, `*.exe`, and temporary debug files are intentionally not meant for Git tracking.
 
-- **IMAP 主机**：如 `mail.yourdomain.com`
-- **端口**：`993`（TLS）
-- **用户名/密码**：catch-all 邮箱的登录凭证
-
-## XOAUTH2 说明
-
-Outlook 官方已关闭普通密码 IMAP 认证，推荐使用 XOAUTH2：
-
-1. 在 [Microsoft Azure](https://portal.azure.com) 注册应用，获取 `client_id`
-2. 通过 OAuth2 授权流程获取 `refresh_token`
-3. 账号格式填写 `邮箱----密码----client_id----refresh_token`
-
-程序会**自动优先使用 XOAUTH2**，失败时自动回退到密码认证。
-
-## 从源码编译
-
-需要 Go 1.21+：
+## Build
 
 ```bash
 go build -o register.exe .
 ```
-
-## 结果目录
-
-注册成功的账号保存在 `tokens/<邮箱>.json`，包含 `access_token`、`refresh_token`、`expires_at` 等字段。
