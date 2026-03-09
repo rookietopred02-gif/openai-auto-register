@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenAI 协议注册 — 控制台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #111827;
+      --bg-card: #1a2035;
+      --bg-card-hover: #1f2847;
+      --border: #2a3555;
+      --border-active: #4f6bff;
+      --text-primary: #e8ecf4;
+      --text-secondary: #8b95b0;
+      --text-muted: #5a6580;
+      --accent: #6366f1;
+      --accent-glow: rgba(99, 102, 241, 0.3);
+      --success: #22c55e;
+      --success-bg: rgba(34, 197, 94, 0.12);
+      --error: #ef4444;
+      --error-bg: rgba(239, 68, 68, 0.12);
+      --warning: #f59e0b;
+      --warning-bg: rgba(245, 158, 11, 0.12);
+      --info: #3b82f6;
+      --info-bg: rgba(59, 130, 246, 0.12);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* 背景动效 */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(168, 85, 247, 0.04) 0%, transparent 50%);
+      animation: bgFloat 20s ease-in-out infinite;
+      z-index: 0;
+    }
+
+    @keyframes bgFloat {
+
+      0%,
+      100% {
+        transform: translate(0, 0) rotate(0deg);
+      }
+
+      33% {
+        transform: translate(2%, -1%) rotate(1deg);
+      }
+
+      66% {
+        transform: translate(-1%, 2%) rotate(-1deg);
+      }
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    /* 头部 */
+    .header {
+      text-align: center;
+      padding: 32px 0 24px;
+    }
+
+    .header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #818cf8, #6366f1, #4f46e5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.02em;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-top: 6px;
+    }
+
+    /* 卡片 */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(20px);
+      transition: border-color 0.3s;
+    }
+
+    .card:hover {
+      border-color: var(--border-active);
+    }
+
+    .card-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .icon {
+      font-size: 1rem;
+    }
+
+    /* 布局 */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+
+      .grid-2,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* 表单 */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text-primary);
+      font-size: 0.88rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .form-group textarea {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      resize: vertical;
+      min-height: 120px;
+      line-height: 1.6;
+    }
+
+    .form-group .hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* 按钮 */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      box-shadow: 0 4px 16px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+      box-shadow: 0 6px 24px rgba(99, 102, 241, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      box-shadow: 0 4px 16px rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-danger:hover {
+      box-shadow: 0 6px 24px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .btn-outline:hover {
+      border-color: var(--text-secondary);
+      color: var(--text-primary);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    /* 统计 */
+    .stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-value.success {
+      color: var(--success);
+    }
+
+    .stat-value.error {
+      color: var(--error);
+    }
+
+    .stat-value.info {
+      color: var(--info);
+    }
+
+    .stat-value.warning {
+      color: var(--warning);
+    }
+
+    .stat-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    /* 进度条 */
+    .progress-wrap {
+      background: var(--bg-secondary);
+      border-radius: 6px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #6366f1, #818cf8);
+      transition: width 0.5s ease;
+      width: 0%;
+    }
+
+    /* 终端日志 */
+    .terminal {
+      background: #0d1117;
+      border: 1px solid #21262d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .terminal-header {
+      background: #161b22;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid #21262d;
+    }
+
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .terminal-dot.red {
+      background: #ff5f57;
+    }
+
+    .terminal-dot.yellow {
+      background: #febc2e;
+    }
+
+    .terminal-dot.green {
+      background: #28c840;
+    }
+
+    .terminal-title {
+      font-size: 0.78rem;
+      color: #8b949e;
+      margin-left: 8px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .terminal-body {
+      padding: 16px;
+      max-height: 420px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: #c9d1d9;
+      scroll-behavior: smooth;
+    }
+
+    .terminal-body::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .terminal-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .terminal-body::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 3px;
+    }
+
+    .log-line {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-line.success {
+      color: #3fb950;
+    }
+
+    .log-line.error {
+      color: #f85149;
+    }
+
+    .log-line.warning {
+      color: #d29922;
+    }
+
+    .log-line.info {
+      color: #58a6ff;
+    }
+
+    .log-line.dim {
+      color: #484f58;
+    }
+
+    /* 结果表格 */
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .results-table th {
+      text-align: left;
+      padding: 10px 14px;
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .results-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-primary);
+    }
+
+    .results-table tr:hover td {
+      background: var(--bg-card-hover);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+
+    .badge-success {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+
+    .badge-error {
+      background: var(--error-bg);
+      color: var(--error);
+    }
+
+    .badge-running {
+      background: var(--info-bg);
+      color: var(--info);
+    }
+
+    /* 状态指示 */
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+
+    .status-dot.online {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .status-dot.offline {
+      background: var(--text-muted);
+    }
+
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state .icon {
+      font-size: 2.5rem;
+      margin-bottom: 12px;
+    }
+
+    .empty-state p {
+      font-size: 0.85rem;
+    }
+
+    /* 动画 */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    .pulse {
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    /* 开关切换 */
+    .switch-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      margin-bottom: 6px;
+    }
+
+    .switch-row label {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch .slider {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--border);
+      border-radius: 22px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .switch .slider::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      left: 3px;
+      bottom: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+
+    .switch input:checked+.slider {
+      background: var(--accent);
+    }
+
+    .switch input:checked+.slider::before {
+      transform: translateX(18px);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <!-- 头部 -->
+    <div class="header fade-in">
+      <h1>⚡ OpenAI 协议注册</h1>
+      <p>纯 API 批量注册 · 浏览器指纹伪装 · IMAP 自动验证</p>
+    </div>
+
+    <!-- 配置 + 统计 -->
+    <div class="grid-2 fade-in">
+      <!-- 左：配置 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">⚙️</span> 注册配置</div>
+        <!-- 邮箱模式选择 -->
+        <div style="display:flex; gap:8px; margin-bottom:16px;">
+          <button class="btn btn-primary" id="btnModeOutlook" onclick="setMailMode('outlook')"
+            style="flex:1; padding:8px 12px; font-size:0.85rem;">
+            📮 Outlook 账号模式
+          </button>
+          <button class="btn btn-outline" id="btnModeDomain" onclick="setMailMode('domain')"
+            style="flex:1; padding:8px 12px; font-size:0.85rem;">
+            🌐 域名邮箱模式
+          </button>
+          <button class="btn btn-outline" id="btnModeTemp" onclick="setMailMode('temp')"
+            style="flex:1; padding:8px 12px; font-size:0.85rem;">
+            🧪 Temp Mail 模式
+          </button>
+        </div>
+
+        <!-- Outlook 模式：账号列表 -->
+        <div id="panelOutlook">
+          <div class="form-group">
+            <label>账号列表</label>
+            <textarea id="accounts"
+              placeholder="每行一个，格式: 邮箱----密码----client_id----refresh_token&#10;例如:&#10;user@outlook.com----password123----client_id----refresh_token"></textarea>
+            <div class="hint">支持从 accounts.txt 粘贴，每行一个账号</div>
+          </div>
+        </div>
+
+        <!-- 域名邮箱模式 -->
+        <div id="panelDomain" style="display:none;">
+          <div
+            style="padding:12px; background:rgba(99,102,241,0.06); border:1px solid var(--border); border-radius:8px; margin-bottom:12px;">
+            <div style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:8px;">📮 域名邮箱 IMAP 配置</div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label>IMAP 服务器</label>
+                <input type="text" id="domainImapHost" placeholder="imap.example.com">
+              </div>
+              <div class="form-group">
+                <label>IMAP 端口</label>
+                <input type="number" id="domainImapPort" value="993" min="1" max="65535">
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label>IMAP 账号</label>
+                <input type="text" id="domainImapUser" placeholder="admin@example.com">
+              </div>
+              <div class="form-group">
+                <label>IMAP 密码</label>
+                <input type="password" id="domainImapPass" placeholder="IMAP 密码/应用专用密码">
+              </div>
+            </div>
+          </div>
+          <div
+            style="padding:12px; background:rgba(34,197,94,0.06); border:1px solid var(--border); border-radius:8px;">
+            <div style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:8px;">📧 注册邮箱设置</div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label>域名</label>
+                <input type="text" id="domainName" placeholder="example.com">
+              </div>
+              <div class="form-group">
+                <label>邮箱前缀</label>
+                <input type="text" id="domainPrefix" placeholder="auto" value="auto">
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label>注册数量</label>
+                <input type="number" id="domainCount" value="10" min="1" max="1000">
+              </div>
+              <div class="form-group">
+                <label>OpenAI 密码</label>
+                <input type="text" id="domainPassword" placeholder="统一密码" value="Qwer1234!">
+              </div>
+            </div>
+            <div class="hint">将自动生成 前缀+随机数@域名 的邮箱地址进行批量注册</div>
+            <div style="margin-top:10px;">
+              <button onclick="cleanupEmails()"
+                style="padding:6px 16px; font-size:0.8rem; background:rgba(239,68,68,0.12); color:#ef4444; border:1px solid rgba(239,68,68,0.3); border-radius:6px; cursor:pointer; transition:all 0.2s;"
+                onmouseover="this.style.background='rgba(239,68,68,0.28)'"
+                onmouseout="this.style.background='rgba(239,68,68,0.12)'">
+                🧹 清理域名邮箱中的 OpenAI 邮件
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Temp Mail 模式 -->
+        <div id="panelTemp" style="display:none;">
+          <div
+            style="padding:12px; background:rgba(14,165,233,0.06); border:1px solid var(--border); border-radius:8px;">
+            <div style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:8px;">🧪 Temp Mail 配置（temp-mail.org）</div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label>注册数量</label>
+                <input type="number" id="tempMailCount" value="3" min="1" max="100">
+              </div>
+              <div class="form-group">
+                <label>OpenAI 密码</label>
+                <input type="text" id="tempMailPassword" value="Qwer1234!">
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="form-group">
+                <label>切换下一个前延迟（秒）</label>
+                <input type="number" id="tempMailNextDelay" value="15" min="0" max="300">
+              </div>
+              <div class="form-group">
+                <label>说明</label>
+                <input type="text" value="拿到前一个 Token 后等待再切到下一个" readonly>
+              </div>
+            </div>
+            <div class="switch-row" style="margin-top:8px;">
+              <label class="switch"><input type="checkbox" id="tempMailParallel"><span class="slider"></span></label>
+              <label for="tempMailParallel">⚡ 启用 Temp Mail 平行注册（使用全局并发线程数）</label>
+            </div>
+            <div class="hint">默认延迟 15 秒。设为 0 表示成功拿到 Token 后立即切换。平行开启后，这个延迟按每个工作线程分别生效。</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="form-group">
+            <label>代理地址</label>
+            <input type="text" id="proxy" placeholder="http://ip:port（可选）">
+          </div>
+          <div class="form-group">
+            <label>并发线程数</label>
+            <input type="number" id="workers" value="1" min="1" max="50">
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" id="btnStart" onclick="startRegister()">🚀 开始注册</button>
+          <button class="btn btn-danger" id="btnStop" onclick="stopRegister()" style="display:none">⏹ 停止</button>
+          <button class="btn btn-outline" id="btnRetry" onclick="retryFailed()" style="display:none">🔁 重试失败账号</button>
+          <button class="btn btn-outline" id="btnLoadFile" onclick="loadAccountsFile()">📂 载入文件</button>
+        </div>
+        <div class="switch-row">
+          <label class="switch"><input type="checkbox" id="loginMode"><span class="slider"></span></label>
+          <label for="loginMode">🔄 注册转登录模式（用登录流程获取 Token）</label>
+        </div>
+        <div class="switch-row">
+          <label class="switch"><input type="checkbox" id="skipFinished" checked><span class="slider"></span></label>
+          <label for="skipFinished">⏭️ 跳过已有凭证账户（results 目录已存在结果的账号）</label>
+        </div>
+        <div id="toastArea" style="margin-top:12px"></div>
+      </div>
+
+      <!-- 右：统计 -->
+      <div class="card">
+        <div class="card-title"><span class="icon">📊</span> 实时统计</div>
+        <div class="grid-3">
+          <div class="stat-card">
+            <div class="stat-value info" id="statTotal">0</div>
+            <div class="stat-label">总计</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value success" id="statSuccess">0</div>
+            <div class="stat-label">成功</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value error" id="statFail">0</div>
+            <div class="stat-label">失败</div>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div style="margin-top:16px;">
+          <div class="grid-2">
+            <div class="stat-card">
+              <div class="stat-value warning" id="statPending">0</div>
+              <div class="stat-label">待注册</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="statElapsed" style="color:var(--text-primary)">0s</div>
+              <div class="stat-label">耗时</div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:14px; display:flex; align-items:center; gap:8px;">
+          <span class="status-dot offline" id="statusDot"></span>
+          <span style="font-size:0.82rem; color:var(--text-secondary)" id="statusText">等待开始</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日志终端 -->
+    <div class="card fade-in">
+      <div class="card-title"><span class="icon">🖥️</span> 运行日志</div>
+      <div class="terminal">
+        <div class="terminal-header">
+          <span class="terminal-dot red"></span>
+          <span class="terminal-dot yellow"></span>
+          <span class="terminal-dot green"></span>
+          <span class="terminal-title">api_register.py</span>
+        </div>
+        <div class="terminal-body" id="logOutput">
+          <div class="log-line dim">等待开始注册...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 注册结果 -->
+    <div class="card fade-in">
+      <div class="card-title"><span class="icon">📋</span> 注册结果</div>
+      <div id="resultsContainer">
+        <div class="empty-state">
+          <div class="icon">📭</div>
+          <p>暂无注册结果</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    // 状态变量
+    // ═══════════════════════════════════════════
+    let isRunning = false;
+    let eventSource = null;
+    let startTime = null;
+    let timerInterval = null;
+    let results = [];
+
+    let originalAccountLines = {}
+
+      ; // email -> 原始行文本，用于重试
+
+    // ═══════════════════════════════════════════
+    // Toast 提示
+    // ═══════════════════════════════════════════
+    function showToast(msg, type) {
+      const area = document.getElementById('toastArea');
+
+      const colors = {
+        error: { bg: 'var(--error-bg)', border: 'var(--error)', color: 'var(--error)' },
+        success: { bg: 'var(--success-bg)', border: 'var(--success)', color: 'var(--success)' },
+        warning: { bg: 'var(--warning-bg)', border: 'var(--warning)', color: 'var(--warning)' },
+        info: { bg: 'var(--info-bg)', border: 'var(--info)', color: 'var(--info)' },
+      };
+      const c = colors[type] || colors.info;
+      area.innerHTML = `<div style="padding:10px 16px;border-radius:8px;font-size:0.85rem;font-weight:500;background:${c.bg};border:1px solid ${c.border};color:${c.color};animation:fadeIn 0.3s ease">${msg}</div>`;
+      setTimeout(() => { if (area.firstChild) area.innerHTML = ''; }, 5000);
+    }
+
+    // ═══════════════════════════════════════════
+    // 邮箱模式切换
+    // ═══════════════════════════════════════════
+    let currentMailMode = 'outlook';
+
+    function setMailMode(mode) {
+      currentMailMode = mode;
+      localStorage.setItem('mailMode', mode);
+      document.getElementById('panelOutlook').style.display = mode === 'outlook' ? 'block' : 'none';
+      document.getElementById('panelDomain').style.display = mode === 'domain' ? 'block' : 'none';
+      document.getElementById('panelTemp').style.display = mode === 'temp' ? 'block' : 'none';
+      document.getElementById('btnLoadFile').style.display = mode === 'outlook' ? '' : 'none';
+      // 切换按钮样式
+      const btnO = document.getElementById('btnModeOutlook');
+      const btnD = document.getElementById('btnModeDomain');
+      const btnT = document.getElementById('btnModeTemp');
+
+      if (mode === 'outlook') {
+        btnO.className = 'btn btn-primary';
+        btnD.className = 'btn btn-outline';
+        btnT.className = 'btn btn-outline';
+      }
+
+      else if (mode === 'domain') {
+        btnO.className = 'btn btn-outline';
+        btnD.className = 'btn btn-primary';
+        btnT.className = 'btn btn-outline';
+      }
+      else {
+        btnO.className = 'btn btn-outline';
+        btnD.className = 'btn btn-outline';
+        btnT.className = 'btn btn-primary';
+      }
+    }
+
+    function saveDomainConfig() {
+      const cfg = {
+        host: document.getElementById('domainImapHost').value,
+        port: document.getElementById('domainImapPort').value,
+        user: document.getElementById('domainImapUser').value,
+        pass: document.getElementById('domainImapPass').value,
+        domain: document.getElementById('domainName').value,
+        prefix: document.getElementById('domainPrefix').value,
+        count: document.getElementById('domainCount').value,
+        password: document.getElementById('domainPassword').value,
+      }
+
+        ;
+      localStorage.setItem('domainConfig', JSON.stringify(cfg));
+    }
+
+    function saveTempMailConfig() {
+      const cfg = {
+        count: document.getElementById('tempMailCount').value,
+        password: document.getElementById('tempMailPassword').value,
+        next_delay_seconds: document.getElementById('tempMailNextDelay').value,
+        allow_parallel: document.getElementById('tempMailParallel').checked,
+      };
+      localStorage.setItem('tempMailConfig', JSON.stringify(cfg));
+    }
+
+    function saveRuntimeConfig() {
+      const cfg = {
+        proxy: document.getElementById('proxy').value,
+        workers: document.getElementById('workers').value,
+      };
+      localStorage.setItem('runtimeConfig', JSON.stringify(cfg));
+    }
+
+    function loadDomainConfig() {
+      const mode = localStorage.getItem('mailMode') || 'outlook';
+      setMailMode(mode);
+
+      try {
+        const cfg = JSON.parse(localStorage.getItem('domainConfig') || '{}');
+        if (cfg.host) document.getElementById('domainImapHost').value = cfg.host;
+        if (cfg.port) document.getElementById('domainImapPort').value = cfg.port;
+        if (cfg.user) document.getElementById('domainImapUser').value = cfg.user;
+        if (cfg.pass) document.getElementById('domainImapPass').value = cfg.pass;
+        if (cfg.domain) document.getElementById('domainName').value = cfg.domain;
+        if (cfg.prefix) document.getElementById('domainPrefix').value = cfg.prefix;
+        if (cfg.count) document.getElementById('domainCount').value = cfg.count;
+        if (cfg.password) document.getElementById('domainPassword').value = cfg.password;
+      }
+
+      catch (e) { }
+
+      try {
+        const tempCfg = JSON.parse(localStorage.getItem('tempMailConfig') || '{}');
+        if (tempCfg.count) document.getElementById('tempMailCount').value = tempCfg.count;
+        if (tempCfg.password) document.getElementById('tempMailPassword').value = tempCfg.password;
+        if (tempCfg.next_delay_seconds !== undefined && tempCfg.next_delay_seconds !== null) {
+          document.getElementById('tempMailNextDelay').value = tempCfg.next_delay_seconds;
+        }
+        if (typeof tempCfg.allow_parallel === 'boolean') {
+          document.getElementById('tempMailParallel').checked = tempCfg.allow_parallel;
+        }
+      }
+
+      catch (e) { }
+
+      try {
+        const runtimeCfg = JSON.parse(localStorage.getItem('runtimeConfig') || '{}');
+        if (runtimeCfg.proxy !== undefined) document.getElementById('proxy').value = runtimeCfg.proxy;
+        if (runtimeCfg.workers) document.getElementById('workers').value = runtimeCfg.workers;
+      }
+
+      catch (e) { }
+
+      const tempParallelEl = document.getElementById('tempMailParallel');
+      if (tempParallelEl) {
+        tempParallelEl.addEventListener('change', saveTempMailConfig);
+      }
+      const tempDelayEl = document.getElementById('tempMailNextDelay');
+      if (tempDelayEl) {
+        tempDelayEl.addEventListener('change', saveTempMailConfig);
+      }
+      const proxyEl = document.getElementById('proxy');
+      if (proxyEl) {
+        proxyEl.addEventListener('change', saveRuntimeConfig);
+      }
+      const workersEl = document.getElementById('workers');
+      if (workersEl) {
+        workersEl.addEventListener('change', saveRuntimeConfig);
+      }
+    }
+
+    // 页面加载时恢复配置
+    window.addEventListener('DOMContentLoaded', loadDomainConfig);
+
+    // ═══════════════════════════════════════════
+    // 操作函数
+    // ═══════════════════════════════════════════
+    async function startRegister() {
+      let accountsText = '';
+      const proxy = document.getElementById('proxy').value.trim();
+      const configuredWorkers = Math.max(1, parseInt(document.getElementById('workers').value) || 1);
+      let workers = configuredWorkers;
+      let domainMailPayload = null;
+      let tempMailPayload = null;
+      saveRuntimeConfig();
+
+      if (currentMailMode === 'domain') {
+        // 域名邮箱模式：自动生成账号
+        saveDomainConfig();
+        const domain = document.getElementById('domainName').value.trim();
+        const prefix = document.getElementById('domainPrefix').value.trim() || 'auto';
+        const count = parseInt(document.getElementById('domainCount').value) || 10;
+        const password = document.getElementById('domainPassword').value || 'Qwer1234!';
+        const imapHost = document.getElementById('domainImapHost').value.trim();
+        const imapUser = document.getElementById('domainImapUser').value.trim();
+        const imapPass = document.getElementById('domainImapPass').value;
+
+        if (!domain) {
+          showToast('❌ 请填写域名', 'error');
+          return;
+        }
+
+        if (!imapHost || !imapUser || !imapPass) {
+          showToast('❌ 请完整填写 IMAP 配置', 'error');
+          return;
+        }
+
+        // 生成邮箱列表
+        const lines = [];
+
+        for (let i = 0; i < count; i++) {
+          const rand = Math.random().toString(36).slice(2, 8) + Math.floor(Math.random() * 1000);
+
+          const email = `${prefix}${rand}@${domain}`;
+          lines.push(`${email}----${password}`);
+
+        }
+
+        accountsText = lines.join('\n');
+
+        domainMailPayload = {
+          host: imapHost,
+          port: parseInt(document.getElementById('domainImapPort').value) || 993,
+          username: imapUser,
+          password: imapPass,
+          use_tls: (parseInt(document.getElementById('domainImapPort').value) || 993) === 993,
+        };
+
+        // 自动启动 Go IMAP 服务轮询
+        sendImapConfigToGo();
+      }
+      else if (currentMailMode === 'temp') {
+        saveTempMailConfig();
+
+        const count = parseInt(document.getElementById('tempMailCount').value) || 0;
+        const password = (document.getElementById('tempMailPassword').value || 'Qwer1234!').trim() || 'Qwer1234!';
+        const nextDelaySeconds = Math.max(0, parseInt(document.getElementById('tempMailNextDelay').value) || 0);
+        const allowParallel = document.getElementById('tempMailParallel').checked;
+
+        if (count < 1) {
+          showToast('❌ Temp Mail 注册数量必须大于 0', 'error');
+          return;
+        }
+
+        if (!allowParallel) {
+          workers = 1;
+        }
+
+        const lines = [];
+        for (let i = 0; i < count; i++) {
+          lines.push(`temp-mail-${i + 1}@placeholder.local----${password}`);
+        }
+        accountsText = lines.join('\n');
+        tempMailPayload = { count, password, next_delay_seconds: nextDelaySeconds, allow_parallel: allowParallel };
+      }
+
+      else {
+        // Outlook 模式：从账号列表
+        accountsText = document.getElementById('accounts').value.trim();
+
+        if (!accountsText) {
+          showToast('❌ 请先填入账号列表', 'error');
+          appendLog('❌ 请先填入账号列表', 'error');
+          return;
+        }
+      }
+
+      // 保存原始账号行，用于后续重试
+      accountsText.split('\n').forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#')) return;
+        const email = trimmed.split('----')[0];
+        if (email) originalAccountLines[email] = trimmed;
+      });
+
+      // 显示加载状态
+      const btn = document.getElementById('btnStart');
+      btn.disabled = true;
+      btn.textContent = '⏳ 连接中...';
+      document.getElementById('btnRetry').style.display = 'none';
+
+      try {
+        const payload = {
+          accounts: accountsText, proxy, workers,
+          login_mode: document.getElementById('loginMode').checked,
+          skip_finished: document.getElementById('skipFinished').checked
+        }
+
+          ;
+        if (domainMailPayload) payload.domain_mail = domainMailPayload;
+        if (tempMailPayload) payload.temp_mail = tempMailPayload;
+
+        const resp = await fetch('/api/start', {
+
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+
+          ,
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+          showToast(`❌ ${data.error}`, 'error');
+          appendLog(`❌ ${data.error}`, 'error');
+
+          btn.disabled = false;
+          btn.textContent = '🚀 开始注册';
+          return;
+        }
+
+        isRunning = true;
+        startTime = Date.now();
+        results = [];
+        updateUI();
+        connectSSE();
+        startTimer();
+
+        showToast(`🚀 已启动！待注册 ${data.total} 个`, 'success');
+
+        appendLog('🚀 注册任务已启动...', 'info');
+
+        appendLog(`📧 待注册: ${data.total} 个, 并发: ${workers}`, 'info');
+
+
+        document.getElementById('statTotal').textContent = data.total;
+        document.getElementById('statPending').textContent = data.total;
+        document.getElementById('statSuccess').textContent = 0;
+        document.getElementById('statFail').textContent = 0;
+        document.getElementById('progressBar').style.width = '0%';
+
+      }
+
+      catch (e) {
+        showToast(`❌ 无法连接后端: ${e.message}`, 'error');
+
+
+        appendLog(`❌ 启动失败: ${e.message}`, 'error');
+
+        btn.disabled = false;
+        btn.textContent = '🚀 开始注册';
+      }
+    }
+
+    async function stopRegister() {
+      try {
+        await fetch('/api/stop', {
+          method: 'POST'
+        });
+        showToast('⏹ 正在停止...', 'warning');
+        appendLog('⏹ 正在停止...', 'warning');
+      }
+
+      catch (e) {
+        appendLog(`⚠️ 停止失败: ${e.message}`, 'warning');
+
+      }
+    }
+
+    function loadAccountsFile() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.txt';
+
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+
+        reader.onload = (ev) => {
+          document.getElementById('accounts').value = ev.target.result;
+          const lineCount = ev.target.result.trim().split('\n').filter(l => l.trim() && !l.trim().startsWith('#')).length;
+
+          showToast(`📂 已载入 ${file.name}，共 ${lineCount} 个账号`, 'success');
+          appendLog(`📂 已载入: ${file.name} (${lineCount} 个账号)`, 'info');
+        };
+
+        reader.readAsText(file);
+      }
+
+        ;
+      input.click();
+    }
+
+    // 重试失败账号
+    function retryFailed() {
+      const failedEmails = results.filter(r => !r.success).map(r => r.email);
+
+      if (failedEmails.length === 0) {
+        showToast('✅ 没有失败的账号', 'success');
+        return;
+      }
+
+      // 从输入框和缓存中找到失败账号的原始行
+      const inputLines = document.getElementById('accounts').value.trim().split('\n');
+      const retryLines = [];
+
+      for (const email of failedEmails) {
+
+        // 优先从缓存查找
+        if (originalAccountLines[email]) {
+          retryLines.push(originalAccountLines[email]);
+          continue;
+        }
+
+        // 否则从输入框查找
+        const found = inputLines.find(l => l.trim().startsWith(email + '----'));
+        if (found) retryLines.push(found.trim());
+      }
+
+      if (retryLines.length === 0) {
+        showToast('❌ 无法找到失败账号的原始信息', 'error');
+        return;
+      }
+
+      // 填入失败账号并自动开始
+      document.getElementById('accounts').value = retryLines.join('\n');
+
+      showToast(`🔁 已填入 ${retryLines.length} 个失败账号，开始重试...`, 'info');
+
+
+      appendLog(`🔁 重试 ${retryLines.length} 个失败账号`, 'warning');
+
+      startRegister();
+    }
+
+    // ═══════════════════════════════════════════
+    // SSE 日志流（页面加载时就连接，保证不遗漏日志）
+    // ═══════════════════════════════════════════
+    function connectSSE() {
+      if (eventSource) {
+        eventSource.close();
+        eventSource = null;
+      }
+
+      eventSource = new EventSource('/api/logs');
+
+      eventSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+
+          if (data.type === 'log') {
+            appendLog(data.text, data.level || '');
+          }
+
+          else if (data.type === 'result') {
+            onResult(data);
+          }
+
+          else if (data.type === 'done') {
+            onDone(data);
+          }
+        }
+
+        catch (err) {
+          // 忽略解析错误
+        }
+      }
+
+        ;
+
+      eventSource.onerror = () => {
+
+        // 断开后 3 秒重连
+        setTimeout(() => {
+          if (isRunning) connectSSE();
+        }
+
+          , 3000);
+      }
+
+        ;
+    }
+
+    function appendLog(text, level) {
+      const el = document.getElementById('logOutput');
+
+      // 清除默认提示
+      if (el.children.length === 1 && el.firstChild.textContent === '等待开始注册...') {
+        el.innerHTML = '';
+      }
+
+      const line = document.createElement('div');
+      line.className = `log-line ${level}`;
+      const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+      line.textContent = `[${time}] ${text}`;
+
+      el.appendChild(line);
+      el.scrollTop = el.scrollHeight;
+
+      while (el.children.length > 500) {
+        el.removeChild(el.firstChild);
+      }
+    }
+
+    // ═══════════════════════════════════════════
+    // 结果处理
+    // ═══════════════════════════════════════════
+    function onResult(data) {
+      results.push(data);
+      const total = parseInt(document.getElementById('statTotal').textContent);
+      const ok = results.filter(r => r.success).length;
+      const fail = results.filter(r => !r.success).length;
+
+      document.getElementById('statSuccess').textContent = ok;
+      document.getElementById('statFail').textContent = fail;
+      document.getElementById('statPending').textContent = Math.max(0, total - ok - fail);
+
+      const pct = total > 0 ? ((ok + fail) / total * 100) : 0;
+      document.getElementById('progressBar').style.width = pct + '%';
+
+      renderResults();
+    }
+
+    function onDone(data) {
+      isRunning = false;
+      updateUI();
+      stopTimer();
+
+      appendLog(`\n${'═'.repeat(40)}`, 'dim');
+      appendLog(`✅ 全部完成！成功: ${data.success}, 失败: ${data.fail}`, 'success');
+      appendLog(`⏱️ 总耗时: ${data.elapsed}`, 'info');
+      appendLog(`${'═'.repeat(40)}`, 'dim');
+
+
+      showToast(`✅ 完成！成功 ${data.success} 个，失败 ${data.fail} 个`, data.fail > 0 ? 'warning' : 'success');
+
+      // 有失败时显示重试按钮
+      const failCount = results.filter(r => !r.success).length;
+      document.getElementById('btnRetry').style.display = failCount > 0 ? 'inline-flex' : 'none';
+    }
+
+    function renderResults() {
+      const container = document.getElementById('resultsContainer');
+
+      if (results.length === 0) {
+        container.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>暂无注册结果</p></div>`;
+        return;
+      }
+
+      let html = `<table class="results-table"><thead><tr><th>#</th><th>邮箱</th><th>状态</th><th>耗时</th><th>详情</th></tr></thead><tbody>`;
+
+      results.forEach((r, i) => {
+        const badge = r.success ? '<span class="badge badge-success">✓ 成功</span>'
+          : '<span class="badge badge-error">✗ 失败</span>';
+        const detail = r.success ? (r.account_id || '—') : (r.error || '—');
+
+        html += `<tr><td>${i + 1}</td><td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem">${r.email || '—'}</td><td>${badge}</td><td>${r.elapsed || '—'}</td><td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-secondary);font-size:0.78rem">${detail}</td></tr>`;
+
+      });
+      html += '</tbody></table>';
+      container.innerHTML = html;
+    }
+
+    // ═══════════════════════════════════════════
+    // UI 更新
+    // ═══════════════════════════════════════════
+    function updateUI() {
+      const btnStart = document.getElementById('btnStart');
+      const btnStop = document.getElementById('btnStop');
+      const dot = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+
+      if (isRunning) {
+        btnStart.style.display = 'none';
+        btnStart.disabled = false;
+        btnStart.textContent = '🚀 开始注册';
+        btnStop.style.display = 'inline-flex';
+        dot.className = 'status-dot online pulse';
+        text.textContent = '注册进行中...';
+      }
+
+      else {
+        btnStart.style.display = 'inline-flex';
+        btnStart.disabled = false;
+        btnStart.textContent = '🚀 开始注册';
+        btnStop.style.display = 'none';
+        dot.className = 'status-dot offline';
+        text.textContent = results.length > 0 ? '已完成' : '等待开始';
+        // 不隐藏 btnRetry，由 onDone 控制
+      }
+    }
+
+    function startTimer() {
+      stopTimer();
+
+      timerInterval = setInterval(() => {
+        if (!startTime) return;
+        const sec = Math.floor((Date.now() - startTime) / 1000);
+        const m = Math.floor(sec / 60);
+        const s = sec % 60;
+
+        document.getElementById('statElapsed').textContent = m > 0 ? `${m}m${s}s` : `${s}s`;
+      }, 1000);
+
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    // ═══════════════════════════════════════════
+    // 集成 IMAP 验证码服务 连接（同源）
+    // ═══════════════════════════════════════════
+    const GO_IMAP_URL = window.location.origin;
+
+    let imapCodes = {}
+
+      ; // email -> CodeEntry
+    let imapSSE = null;
+    let hubConnected = false;
+
+    function connectImapSSE() {
+      if (imapSSE) imapSSE.close();
+      imapSSE = new EventSource(GO_IMAP_URL + '/api/stream');
+
+      imapSSE.onopen = () => {
+        hubConnected = true;
+      }
+
+        ;
+
+      imapSSE.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
+
+          if (msg.type === 'code') {
+            const d = msg.data;
+            imapCodes[d.email.toLowerCase()] = d;
+          }
+
+          else if (msg.type === 'consumed') {
+            const d = msg.data;
+            const key = (d.email || '').toLowerCase();
+
+            if (imapCodes[key]) {
+              imapCodes[key].consumed = true;
+            }
+          }
+
+          else if (msg.type === 'log') {
+            appendLog('[IMAP] ' + (msg.text || msg.data || ''), 'info');
+          }
+
+          else if (msg.type === 'cleanup') {
+            const d = msg.data;
+
+            imapCodes = {}
+
+              ;
+
+            if (d && d.deleted !== undefined) {
+              appendLog('🧹 清理完成: 已删除 ' + d.deleted + ' 封邮件', 'success');
+              showToast('🧹 已删除 ' + d.deleted + ' 封 OpenAI 邮件', 'success');
+            }
+          }
+        }
+
+        catch (err) { }
+      }
+
+        ;
+
+      imapSSE.onerror = () => {
+        hubConnected = false;
+        setTimeout(connectImapSSE, 5000);
+      }
+
+        ;
+    }
+
+    function renderImapCodes() {
+      /* 面板已移除，逻辑内部保留 */
+    }
+
+
+    // 注册开始时自动发送 IMAP 配置给 Go 服务
+    async function sendImapConfigToGo() {
+      if (currentMailMode !== 'domain') return;
+
+      const port = parseInt(document.getElementById('domainImapPort').value) || 993;
+      const cfg = {
+        host: document.getElementById('domainImapHost').value.trim(),
+        port: port,
+        username: document.getElementById('domainImapUser').value.trim(),
+        password: document.getElementById('domainImapPass').value,
+        use_tls: port === 993 || port === 465,
+      };
+
+      if (!cfg.host || !cfg.username || !cfg.password) return;
+
+
+      try {
+        await fetch(GO_IMAP_URL + '/api/config', {
+
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+
+          ,
+          body: JSON.stringify(cfg),
+        });
+      }
+
+      catch (e) {
+        // Go 服务未启动，忽略
+      }
+    }
+
+    // 清理 OpenAI 邮件
+    async function cleanupEmails() {
+      try {
+        const port = parseInt(document.getElementById('domainImapPort').value) || 993;
+        const cfg = {
+          host: document.getElementById('domainImapHost').value.trim(),
+          port: port,
+          username: document.getElementById('domainImapUser').value.trim(),
+          password: document.getElementById('domainImapPass').value,
+          use_tls: port === 993 || port === 465,
+        };
+
+
+        if (!cfg.host || !cfg.username || !cfg.password) {
+
+          showToast('❌ 请先填写域名邮箱 IMAP 配置', 'error');
+          return;
+        }
+
+        // 推送最新配置给 Go 服务
+        await fetch(GO_IMAP_URL + '/api/config', {
+
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+
+          ,
+          body: JSON.stringify(cfg),
+        });
+        appendLog('🧹 正在清理 OpenAI 邮件...', 'info');
+
+        const resp = await fetch(GO_IMAP_URL + '/api/cleanup', {
+          method: 'POST'
+        });
+        const data = await resp.json();
+
+        if (data.ok) {
+          showToast('🧹 清理任务已启动', 'success');
+        }
+
+        else {
+          appendLog('❌ 清理失败: ' + (data.error || ''), 'error');
+        }
+      }
+
+      catch (e) {
+        appendLog('❌ 无法连接 Go IMAP 服务: ' + e.message, 'error');
+      }
+    }
+
+    // 页面加载
+    window.addEventListener('load', async () => {
+      // 始终连接 SSE（接收日志）
+      connectSSE();
+      // 连接集成 IMAP 验证码服务
+      connectImapSSE();
+
+      // 检查是否有任务正在运行
+      try {
+        const resp = await fetch('/api/status');
+        const data = await resp.json();
+
+        if (data.running) {
+          isRunning = true;
+          startTime = Date.now() - (data.elapsed * 1000);
+          document.getElementById('statTotal').textContent = data.total || 0;
+          updateUI();
+          startTimer();
+        }
+      }
+
+      catch (e) {
+        // 后端未启动
+      }
+    });
+  </script>
+</body>
+
+</html>

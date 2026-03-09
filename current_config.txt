@@ -1,0 +1,8 @@
+IMAP 服务器 = imap.gmail.com
+IMAP 端口 = 993
+IMAP 账号 = gifulin.tw@gmail.com
+IMAP 密码 = gxotdizjdytlqpdn
+域名 = gifulin.anonaddy.com
+邮箱前缀 = auto
+注册数量 = 10
+OpenAI 密码 = Qwer1234!
