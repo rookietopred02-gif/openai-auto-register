@@ -3,7 +3,7 @@
 This fork is focused on the Go-based registration flow and the local dashboard in `api-register-go`.
 
 ## Fork-specific changes
-
+- Imporved initial coder shitty vibe codes
 - Added `Temp Mail` mode for dashboard-driven registration.
 - Added automatic fallback from `temp-mail.org` to `mail.tm`.
 - Added dashboard controls for:
