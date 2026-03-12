@@ -31,15 +31,19 @@ import (
 // 常量
 // ═══════════════════════════════════════════════════════
 const (
-	OAIClientID    = "app_EMoamEEZ73f0CkXaXp7hrann"
-	OAIAuthURL     = "https://auth.openai.com/oauth/authorize"
-	OAITokenURL    = "https://auth.openai.com/oauth/token"
-	OAISentinelURL = "https://sentinel.openai.com/backend-api/sentinel/req"
-	OAISignupURL   = "https://auth.openai.com/api/accounts/authorize/continue"
-	OAISendOTPURL  = "https://auth.openai.com/api/accounts/passwordless/send-otp"
-	OAIVerifyURL   = "https://auth.openai.com/api/accounts/email-otp/validate"
-	OAICreateURL   = "https://auth.openai.com/api/accounts/create_account"
-	OAIWorkURL     = "https://auth.openai.com/api/accounts/workspace/select"
+	defaultRegisterPassword = "Qwer1234!Aa#"
+
+	OAIClientID          = "app_EMoamEEZ73f0CkXaXp7hrann"
+	OAIAuthURL           = "https://auth.openai.com/oauth/authorize"
+	OAITokenURL          = "https://auth.openai.com/oauth/token"
+	OAISentinelURL       = "https://sentinel.openai.com/backend-api/sentinel/req"
+	OAISignupURL         = "https://auth.openai.com/api/accounts/authorize/continue"
+	OAIUserRegisterURL   = "https://auth.openai.com/api/accounts/user/register"
+	OAISendOTPURL        = "https://auth.openai.com/api/accounts/passwordless/send-otp"
+	OAIEmailOTPResendURL = "https://auth.openai.com/api/accounts/email-otp/resend"
+	OAIVerifyURL         = "https://auth.openai.com/api/accounts/email-otp/validate"
+	OAICreateURL         = "https://auth.openai.com/api/accounts/create_account"
+	OAIWorkURL           = "https://auth.openai.com/api/accounts/workspace/select"
 
 	LocalPort        = 1455
 	LocalRedirectURI = "http://localhost:1455/auth/callback"
@@ -405,6 +409,7 @@ func (h *HTTPClient) saveCookies(resp *fhttp.Response) {
 // ═══════════════════════════════════════════════════════
 func registerAccount(acc Account, proxy string, mode string, domainMail *DomainMailConfig, tempMail *TempMailConfig) (*RegResult, error) {
 	email := strings.TrimSpace(acc.Email)
+	tempMode := tempMail != nil
 	if strings.HasSuffix(strings.ToLower(email), "@placeholder.local") {
 		if err := ensureTempMailReady(); err != nil {
 			return nil, fmt.Errorf("Temp Mail 初始化失败: %w", err)
@@ -449,7 +454,7 @@ func registerAccount(acc Account, proxy string, mode string, domainMail *DomainM
 	if deviceID != "" {
 		broadcast(fmt.Sprintf("      设备ID: %s...", deviceID[:min(16, len(deviceID))]), "dim")
 	}
-	sleepRand(800, 2000)
+	sleepFlow(tempMode, 800, 2000)
 
 	// --- Step 2: Sentinel ---
 	if gStopFlag.Load() {
@@ -471,7 +476,7 @@ func registerAccount(acc Account, proxy string, mode string, domainMail *DomainM
 		"p": "", "t": "", "c": sentinelToken, "id": deviceID, "flow": "authorize_continue",
 	})
 	broadcast("      OK", "dim")
-	sleepRand(500, 1500)
+	sleepFlow(tempMode, 500, 1500)
 
 	// 对应 Python: otp_sent_at = time.time() 在提交邮箱之前
 	// 已注册账号在步骤3提交邮箱时自动发送OTP，所以需要在步骤3之前记录时间
@@ -497,32 +502,89 @@ func registerAccount(acc Account, proxy string, mode string, domainMail *DomainM
 
 	var step3Data map[string]interface{}
 	json.Unmarshal([]byte(s3Body), &step3Data)
-	pageType := ""
-	if page, ok := step3Data["page"].(map[string]interface{}); ok {
-		pageType, _ = page["type"].(string)
-	}
+	pageType := extractPageType(step3Data)
+	step3ContinueURL := strFromMap(step3Data, "continue_url")
 	broadcast(fmt.Sprintf("      页面类型: %s", pageType), "dim")
-	sleepRand(500, 1500)
+	sleepFlow(tempMode, 500, 1500)
 
 	isExisting := pageType == "email_otp_verification"
+	otpResendMode := ""
 
 	// --- Step 4: Send OTP ---
 	if gStopFlag.Load() {
 		return nil, fmt.Errorf("已取消")
 	}
-	if isExisting {
+	switch pageType {
+	case "create_account_password":
+		if step3ContinueURL != "" {
+			status, _, err := httpClient.Get(step3ContinueURL)
+			if err != nil {
+				return nil, fmt.Errorf("访问密码注册页失败: %w", err)
+			}
+			if status < 200 || status >= 400 {
+				return nil, fmt.Errorf("访问密码注册页失败: %d", status)
+			}
+			sleepFlow(tempMode, 300, 900)
+		}
+
+		password, err := normalizeRegisterPassword(acc.Password)
+		if err != nil {
+			return nil, err
+		}
+
+		broadcast("  [4] 提交注册密码...", "info")
+		r4Status, r4Body, err := httpClient.PostJSON(OAIUserRegisterURL, map[string]interface{}{
+			"username": email,
+			"password": password,
+		}, map[string]string{
+			"Referer": "https://auth.openai.com/create-account/password",
+		})
+		if err != nil {
+			return nil, fmt.Errorf("提交注册密码失败: %w", err)
+		}
+		if r4Status < 200 || r4Status >= 300 {
+			return nil, fmt.Errorf("提交注册密码失败: %d %s", r4Status, truncate(r4Body, 300))
+		}
+
+		var step4Data map[string]interface{}
+		json.Unmarshal([]byte(r4Body), &step4Data)
+		pageType = extractPageType(step4Data)
+		broadcast("      OK", "dim")
+		broadcast(fmt.Sprintf("      下一页面: %s", pageType), "dim")
+
+		if nextURL := strFromMap(step4Data, "continue_url"); nextURL != "" {
+			status, _, err := httpClient.Get(nextURL)
+			if err != nil {
+				return nil, fmt.Errorf("访问下一注册页失败: %w", err)
+			}
+			if status < 200 || status >= 400 {
+				return nil, fmt.Errorf("访问下一注册页失败: %d", status)
+			}
+		}
+
+		if pageType == "email_otp_send" || pageType == "email_otp_verification" {
+			otpResendMode = "email_otp"
+			otpSentAt = time.Now()
+		}
+		sleepFlow(tempMode, 500, 1200)
+	case "email_otp_verification":
 		broadcast("  [4] 跳过发送 OTP（服务器已自动发送）", "info")
-	} else {
+		otpResendMode = "email_otp"
+	default:
 		broadcast("  [4] 发送 OTP...", "info")
 		o4Status, o4Body, err := httpClient.PostJSON(OAISendOTPURL, map[string]interface{}{}, map[string]string{
 			"Referer": "https://auth.openai.com/create-account/password",
 		})
-		if err != nil || o4Status < 200 || o4Status >= 300 {
-			return nil, fmt.Errorf("发送 OTP 失败: %d %s", o4Status, truncate(o4Body, 300))
+		if err != nil {
+			return nil, fmt.Errorf("发送 OTP 失败: %w", err)
 		}
-		broadcast(fmt.Sprintf("      OK，验证码已发送到 %s", email), "dim")
-		// 新账号：OTP 在步骤4发送，更新时间（对应 Python: otp_sent_at = time.time() 更新）
-		otpSentAt = time.Now()
+		if o4Status < 200 || o4Status >= 300 {
+			return nil, fmt.Errorf("发送 OTP 失败: %d %s", o4Status, truncate(o4Body, 300))
+		} else {
+			broadcast(fmt.Sprintf("      OK，验证码已发送到 %s", email), "dim")
+			otpSentAt = time.Now()
+			otpResendMode = "passwordless"
+		}
 	}
 
 	// --- Step 5: Get code ---
@@ -537,13 +599,25 @@ func registerAccount(acc Account, proxy string, mode string, domainMail *DomainM
 	}
 	broadcast(fmt.Sprintf("    📧 等待验证码 (%s, %s)...", email, codeSource), "info")
 
-	otpSentAt = otpSentAt // 已在步骤3前/4后记录
-
 	resendFn := func() bool {
-		s, _, _ := httpClient.PostJSON(OAISendOTPURL, map[string]interface{}{}, map[string]string{
-			"Referer": "https://auth.openai.com/email-verification",
-		})
-		return s >= 200 && s < 300
+		switch otpResendMode {
+		case "email_otp":
+			s, _, _ := httpClient.PostJSON(OAIEmailOTPResendURL, map[string]interface{}{}, map[string]string{
+				"Referer": "https://auth.openai.com/email-verification",
+			})
+			return s >= 200 && s < 300
+		case "passwordless":
+			s, _, _ := httpClient.PostJSON(OAISendOTPURL, map[string]interface{}{}, map[string]string{
+				"Referer": "https://auth.openai.com/email-verification",
+			})
+			return s >= 200 && s < 300
+		default:
+			return false
+		}
+	}
+
+	if !isExisting && otpResendMode == "" {
+		return nil, fmt.Errorf("当前注册流未进入邮箱验证码阶段: %s", pageType)
 	}
 
 	var code string
@@ -563,7 +637,7 @@ func registerAccount(acc Account, proxy string, mode string, domainMail *DomainM
 	if gStopFlag.Load() {
 		return nil, fmt.Errorf("已取消")
 	}
-	sleepRand(300, 1000)
+	sleepFlow(tempMode, 300, 1000)
 
 	// --- Step 6: Verify OTP ---
 	if gStopFlag.Load() {
@@ -577,7 +651,7 @@ func registerAccount(acc Account, proxy string, mode string, domainMail *DomainM
 		return nil, fmt.Errorf("OTP 验证失败: %d %s", v6Status, truncate(v6Body, 300))
 	}
 	broadcast("      OK", "dim")
-	sleepRand(500, 1500)
+	sleepFlow(tempMode, 500, 1500)
 
 	// --- Step 7: Create account ---
 	name := ""
@@ -597,7 +671,7 @@ func registerAccount(acc Account, proxy string, mode string, domainMail *DomainM
 			return nil, fmt.Errorf("创建账号失败: %d %s", c7Status, truncate(c7Body, 300))
 		}
 		broadcast("      OK", "dim")
-		sleepRand(500, 1500)
+		sleepFlow(tempMode, 500, 1500)
 	}
 
 	// --- Step 8: Select workspace ---
@@ -716,8 +790,9 @@ func waitForCode(email string, otpSentAt time.Time, resendFn func() bool) (strin
 			return
 		}
 		if resendFn != nil {
-			resendFn()
-			broadcast("    🔄 已重发 OTP", "info")
+			if resendFn() {
+				broadcast("    🔄 已重发 OTP", "info")
+			}
 		}
 		// 此后每 25 秒重发
 		ticker := time.NewTicker(ResendInterval)
@@ -726,8 +801,9 @@ func waitForCode(email string, otpSentAt time.Time, resendFn func() bool) (strin
 			select {
 			case <-ticker.C:
 				if resendFn != nil {
-					resendFn()
-					broadcast("    🔄 已重发 OTP", "info")
+					if resendFn() {
+						broadcast("    🔄 已重发 OTP", "info")
+					}
 				}
 			case <-done:
 				return
@@ -1051,6 +1127,32 @@ func normalizeTempWorkers(requested int, allowParallel bool) int {
 	return requested
 }
 
+func isPasswordlessUnavailable(status int, body string) bool {
+	lower := strings.ToLower(body)
+	return status == 401 && strings.Contains(lower, "passwordless signup is unavailable")
+}
+
+func extractPageType(data map[string]interface{}) string {
+	page, ok := data["page"].(map[string]interface{})
+	if !ok {
+		return ""
+	}
+	pageType, _ := page["type"].(string)
+	return pageType
+}
+
+func normalizeRegisterPassword(raw string) (string, error) {
+	password := strings.TrimSpace(raw)
+	switch password {
+	case "", "Qwer1234!":
+		return defaultRegisterPassword, nil
+	}
+	if len([]rune(password)) < 12 {
+		return "", fmt.Errorf("OpenAI 注册密码至少需要 12 位，请在 Dashboard 调整密码后重试")
+	}
+	return password, nil
+}
+
 func handleStart(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		http.Error(w, "Method not allowed", 405)
@@ -1094,9 +1196,13 @@ func handleStart(w http.ResponseWriter, r *http.Request) {
 		if count > 200 {
 			count = 200
 		}
-		password := strings.TrimSpace(req.TempMail.Password)
-		if password == "" {
-			password = "Qwer1234!"
+		password, err := normalizeRegisterPassword(req.TempMail.Password)
+		if err != nil {
+			jsonResp(w, map[string]interface{}{"error": err.Error()})
+			return
+		}
+		if strings.TrimSpace(req.TempMail.Password) != password {
+			broadcast(fmt.Sprintf("⚠️ Temp Mail 密码已自动升级为兼容默认值: %s", password), "warning")
 		}
 		req.Workers = normalizeTempWorkers(req.Workers, req.TempMail.AllowParallel)
 		for i := 0; i < count; i++ {
@@ -1147,9 +1253,13 @@ func handleStart(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if allPlaceholder {
-			password := strings.TrimSpace(accounts[0].Password)
-			if password == "" {
-				password = "Qwer1234!"
+			password, err := normalizeRegisterPassword(accounts[0].Password)
+			if err != nil {
+				jsonResp(w, map[string]interface{}{"error": err.Error()})
+				return
+			}
+			if strings.TrimSpace(accounts[0].Password) != password {
+				broadcast(fmt.Sprintf("⚠️ 占位账号密码已自动升级为兼容默认值: %s", password), "warning")
 			}
 			req.TempMail = &TempMailConfig{
 				Count:         len(accounts),
@@ -1357,7 +1467,7 @@ func doOne(acc Account, idx, total int, proxy, mode string, domainMail *DomainMa
 		}
 		if attempt > 1 {
 			broadcast(fmt.Sprintf("  重试 #%d...", attempt), "warning")
-			sleepRand(2000, 4000)
+			sleepFlow(tempMail != nil, 2000, 4000)
 		}
 
 		runAcc := acc
@@ -1469,8 +1579,38 @@ func getFinishedEmails() map[string]bool {
 }
 
 func sleepRand(minMs, maxMs int) {
+	if maxMs <= minMs {
+		time.Sleep(time.Duration(minMs) * time.Millisecond)
+		return
+	}
 	d := time.Duration(minMs+rand.Intn(maxMs-minMs)) * time.Millisecond
 	time.Sleep(d)
+}
+
+func adjustedFlowDelayRange(tempMode bool, minMs, maxMs int) (int, int) {
+	if !tempMode {
+		return minMs, maxMs
+	}
+	fastMin := minMs / 4
+	if fastMin < 80 {
+		fastMin = 80
+	}
+	fastMax := maxMs / 4
+	if fastMax < fastMin+40 {
+		fastMax = fastMin + 40
+	}
+	if fastMax > maxMs {
+		fastMax = maxMs
+	}
+	if fastMin > fastMax {
+		fastMin = fastMax
+	}
+	return fastMin, fastMax
+}
+
+func sleepFlow(tempMode bool, minMs, maxMs int) {
+	minMs, maxMs = adjustedFlowDelayRange(tempMode, minMs, maxMs)
+	sleepRand(minMs, maxMs)
 }
 
 func sleepWithStop(d time.Duration) bool {

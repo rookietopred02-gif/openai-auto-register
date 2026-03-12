@@ -21,7 +21,7 @@ const (
 	tempMailHomeURL      = "https://temp-mail.org/en/"
 	tempMailAPIBase      = "https://web2.temp-mail.org"
 	mailTMAPIBase        = "https://api.mail.tm"
-	tempMailPollInterval = 4 * time.Second
+	tempMailPollInterval = 2 * time.Second
 	tempMailDefaultGap   = 15 * time.Second
 	tempMailCreateWait   = 24 * time.Second
 	mailTMDomainCacheTTL = 15 * time.Minute
@@ -88,6 +88,7 @@ type TempMailService struct {
 	token           string
 	currentMailbox  string
 	firstServed     bool
+	freshOnFirst    bool
 	lastCreatedAt   time.Time
 	mailTMDomain    string
 	domainFetchedAt time.Time
@@ -130,6 +131,8 @@ func (s *TempMailService) Configure(proxy string, cfg *TempMailConfig) {
 		s.httpClient = nil
 		s.detailCache = nil
 	}
+	s.firstServed = false
+	s.freshOnFirst = false
 }
 
 func (s *TempMailService) EnsureReady() error {
@@ -152,11 +155,13 @@ func (s *TempMailService) ensureReadyLocked() error {
 		if s.provider == "" {
 			s.provider = "temp-mail"
 		}
+		s.freshOnFirst = true
 		return nil
 	}
 
 	if s.loadSessionLocked() && s.validateCurrentMailboxLocked() {
 		s.firstServed = false
+		s.freshOnFirst = true
 		return nil
 	}
 
@@ -165,6 +170,7 @@ func (s *TempMailService) ensureReadyLocked() error {
 		return err
 	}
 	s.firstServed = false
+	s.freshOnFirst = false
 	return nil
 }
 
@@ -178,12 +184,16 @@ func (s *TempMailService) AcquireMailbox() (string, error) {
 
 	if !s.firstServed {
 		s.firstServed = true
-		if strings.EqualFold(s.provider, "mailtm") {
-			// mail.tm 无需复用旧箱，首个账号也尽量使用新邮箱，避免复用导致账号已存在。
-			if err := s.createMailTMMailboxLocked(); err == nil {
+		if s.freshOnFirst || strings.EqualFold(s.provider, "mailtm") {
+			// 新任务的首个账号也强制拿新邮箱，避免重启后复用上一个 mailbox。
+			if err := s.createFreshMailboxLocked(s.token); err == nil {
+				s.freshOnFirst = false
 				return s.currentMailbox, nil
+			} else if s.freshOnFirst {
+				return "", err
 			}
 		}
+		s.freshOnFirst = false
 		return s.currentMailbox, nil
 	}
 
@@ -752,8 +762,9 @@ func waitForTempMailCode(email string, otpSentAt time.Time, resendFn func() bool
 			return
 		}
 		if resendFn != nil {
-			resendFn()
-			broadcast("    🔄 已重发 OTP", "info")
+			if resendFn() {
+				broadcast("    🔄 已重发 OTP", "info")
+			}
 		}
 		ticker := time.NewTicker(ResendInterval)
 		defer ticker.Stop()
@@ -761,8 +772,9 @@ func waitForTempMailCode(email string, otpSentAt time.Time, resendFn func() bool
 			select {
 			case <-ticker.C:
 				if resendFn != nil {
-					resendFn()
-					broadcast("    🔄 已重发 OTP", "info")
+					if resendFn() {
+						broadcast("    🔄 已重发 OTP", "info")
+					}
 				}
 			case <-done:
 				return

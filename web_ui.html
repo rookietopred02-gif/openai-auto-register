@@ -682,7 +682,7 @@
               </div>
               <div class="form-group">
                 <label>OpenAI 密码</label>
-                <input type="text" id="domainPassword" placeholder="统一密码" value="Qwer1234!">
+                <input type="text" id="domainPassword" placeholder="统一密码" value="Qwer1234!Aa#">
               </div>
             </div>
             <div class="hint">将自动生成 前缀+随机数@域名 的邮箱地址进行批量注册</div>
@@ -709,7 +709,7 @@
               </div>
               <div class="form-group">
                 <label>OpenAI 密码</label>
-                <input type="text" id="tempMailPassword" value="Qwer1234!">
+                <input type="text" id="tempMailPassword" value="Qwer1234!Aa#">
               </div>
             </div>
             <div class="grid-2">
@@ -833,10 +833,18 @@
     let startTime = null;
     let timerInterval = null;
     let results = [];
+    const LEGACY_REGISTER_PASSWORD = 'Qwer1234!';
+    const DEFAULT_REGISTER_PASSWORD = 'Qwer1234!Aa#';
 
     let originalAccountLines = {}
 
       ; // email -> 原始行文本，用于重试
+
+    function normalizeRegisterPassword(value) {
+      const raw = (value || '').trim();
+      if (!raw || raw === LEGACY_REGISTER_PASSWORD) return DEFAULT_REGISTER_PASSWORD;
+      return raw;
+    }
 
     // ═══════════════════════════════════════════
     // Toast 提示
@@ -899,7 +907,7 @@
         domain: document.getElementById('domainName').value,
         prefix: document.getElementById('domainPrefix').value,
         count: document.getElementById('domainCount').value,
-        password: document.getElementById('domainPassword').value,
+        password: normalizeRegisterPassword(document.getElementById('domainPassword').value),
       }
 
         ;
@@ -909,7 +917,7 @@
     function saveTempMailConfig() {
       const cfg = {
         count: document.getElementById('tempMailCount').value,
-        password: document.getElementById('tempMailPassword').value,
+        password: normalizeRegisterPassword(document.getElementById('tempMailPassword').value),
         next_delay_seconds: document.getElementById('tempMailNextDelay').value,
         allow_parallel: document.getElementById('tempMailParallel').checked,
       };
@@ -937,7 +945,7 @@
         if (cfg.domain) document.getElementById('domainName').value = cfg.domain;
         if (cfg.prefix) document.getElementById('domainPrefix').value = cfg.prefix;
         if (cfg.count) document.getElementById('domainCount').value = cfg.count;
-        if (cfg.password) document.getElementById('domainPassword').value = cfg.password;
+        if (cfg.password) document.getElementById('domainPassword').value = normalizeRegisterPassword(cfg.password);
       }
 
       catch (e) { }
@@ -945,7 +953,7 @@
       try {
         const tempCfg = JSON.parse(localStorage.getItem('tempMailConfig') || '{}');
         if (tempCfg.count) document.getElementById('tempMailCount').value = tempCfg.count;
-        if (tempCfg.password) document.getElementById('tempMailPassword').value = tempCfg.password;
+        if (tempCfg.password) document.getElementById('tempMailPassword').value = normalizeRegisterPassword(tempCfg.password);
         if (tempCfg.next_delay_seconds !== undefined && tempCfg.next_delay_seconds !== null) {
           document.getElementById('tempMailNextDelay').value = tempCfg.next_delay_seconds;
         }
@@ -1003,7 +1011,7 @@
         const domain = document.getElementById('domainName').value.trim();
         const prefix = document.getElementById('domainPrefix').value.trim() || 'auto';
         const count = parseInt(document.getElementById('domainCount').value) || 10;
-        const password = document.getElementById('domainPassword').value || 'Qwer1234!';
+        const password = normalizeRegisterPassword(document.getElementById('domainPassword').value);
         const imapHost = document.getElementById('domainImapHost').value.trim();
         const imapUser = document.getElementById('domainImapUser').value.trim();
         const imapPass = document.getElementById('domainImapPass').value;
@@ -1015,6 +1023,11 @@
 
         if (!imapHost || !imapUser || !imapPass) {
           showToast('❌ 请完整填写 IMAP 配置', 'error');
+          return;
+        }
+
+        if (password.length < 12) {
+          showToast('❌ OpenAI 密码至少需要 12 位', 'error');
           return;
         }
 
@@ -1046,12 +1059,17 @@
         saveTempMailConfig();
 
         const count = parseInt(document.getElementById('tempMailCount').value) || 0;
-        const password = (document.getElementById('tempMailPassword').value || 'Qwer1234!').trim() || 'Qwer1234!';
+        const password = normalizeRegisterPassword(document.getElementById('tempMailPassword').value);
         const nextDelaySeconds = Math.max(0, parseInt(document.getElementById('tempMailNextDelay').value) || 0);
         const allowParallel = document.getElementById('tempMailParallel').checked;
 
         if (count < 1) {
           showToast('❌ Temp Mail 注册数量必须大于 0', 'error');
+          return;
+        }
+
+        if (password.length < 12) {
+          showToast('❌ OpenAI 密码至少需要 12 位', 'error');
           return;
         }
 

@@ -37,6 +37,14 @@ func TestExtractTempMailCodeNoDigitsAfterChatGPT(t *testing.T) {
 	}
 }
 
+func TestExtractTempMailCodeRejectsEmailAddressDigits(t *testing.T) {
+	row := `foo123456@example.com ChatGPT verification`
+	code := extractTempMailCode(row, 1)
+	if code != "" {
+		t.Fatalf("expected empty code, got %q", code)
+	}
+}
+
 func TestParseTempMailTimeUnixMillis(t *testing.T) {
 	got := parseTempMailTime("1773004905406")
 	if got.IsZero() {
@@ -104,5 +112,35 @@ func TestFindBestTempMailCodeMarksNonCandidateSeen(t *testing.T) {
 	}
 	if _, ok := seen["spam-1"]; !ok {
 		t.Fatalf("non-candidate row should be marked seen")
+	}
+}
+
+func TestIsTempMailCodeCandidate(t *testing.T) {
+	if !isTempMailCodeCandidate("ChatGPT security code") {
+		t.Fatal("expected ChatGPT text to be candidate")
+	}
+	if isTempMailCodeCandidate("newsletter") {
+		t.Fatal("did not expect unrelated text to be candidate")
+	}
+}
+
+func TestTempMailConfigureResetsTaskFlags(t *testing.T) {
+	delay0 := 0
+	svc := &TempMailService{
+		firstServed:  true,
+		freshOnFirst: true,
+		createGap:    30 * time.Second,
+	}
+
+	svc.Configure("", &TempMailConfig{NextDelaySeconds: &delay0})
+
+	if svc.firstServed {
+		t.Fatalf("expected firstServed to reset for new task")
+	}
+	if svc.freshOnFirst {
+		t.Fatalf("expected freshOnFirst to reset for new task")
+	}
+	if svc.createGap != 0 {
+		t.Fatalf("expected createGap to follow config, got %s", svc.createGap)
 	}
 }
